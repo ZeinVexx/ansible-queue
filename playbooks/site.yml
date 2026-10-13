@@ -5,6 +5,10 @@
   become: true
 
   pre_tasks:
+    - name: Load global defaults
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../group_vars/all.yml"
+
     - name: Load rollout targets
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/../rollout/targets.yml"
