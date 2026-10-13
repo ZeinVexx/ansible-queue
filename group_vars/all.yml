@@ -1,7 +1,6 @@
 ---
 queue_status_webhook_url: ""
 
-# Demo setup: use a tiny public image so it is easy to run on multiple VMs
 queue_container_name: demo-web
 queue_container_ports:
   - "8080:80"
