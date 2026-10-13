@@ -27,3 +27,13 @@ store_commands:
     command: "df -h . && du -sh ."
     once: true
     ignore_errors: false
+
+  - id: ls-demo-001
+    enabled: true
+    target_stores: ["store-001"]
+    runner: host
+    become: true
+    chdir: /etc
+    command: "ls -la && pwd"
+    once: false
+    ignore_errors: false
