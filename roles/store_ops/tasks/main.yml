@@ -1,0 +1,72 @@
+---
+- name: Ensure agent state directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /var/lib/queue-agent
+    - /var/lib/queue-agent/ops-history
+    - /var/lib/queue-agent/status
+
+- name: Load command operations
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../ops/commands.yml"
+  failed_when: false
+
+- name: Execute requested store operations
+  ansible.builtin.include_tasks: run_command.yml
+  loop: "{{ store_commands | default([]) }}"
+  loop_control:
+    label: "{{ item.id | default('unidentified-command') }}"
+
+- name: Capture recent container logs
+  ansible.builtin.shell: >-
+    docker logs --tail {{ queue_log_tail_lines | int }} {{ queue_container_name }}
+  register: queue_recent_logs
+  changed_when: false
+  failed_when: false
+
+- name: Save latest log snapshot
+  ansible.builtin.copy:
+    dest: /var/lib/queue-agent/status/latest-container.log
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {{ queue_recent_logs.stdout | default('') }}
+
+- name: Build local status payload
+  ansible.builtin.copy:
+    dest: /var/lib/queue-agent/status/status.json
+    owner: root
+    group: root
+    mode: "0644"
+    content: "{{ status_payload | to_nice_json }}"
+  vars:
+    status_payload:
+      store_id: "{{ store_id }}"
+      image: "{{ queue_effective_image }}"
+      channel: "{{ queue_store_channel }}"
+      host: "{{ ansible_hostname }}"
+      generated_at: "{{ ansible_date_time.iso8601 }}"
+      log_tail_lines: "{{ queue_log_tail_lines }}"
+
+- name: Publish status to webhook
+  ansible.builtin.uri:
+    url: "{{ queue_status_webhook_url }}"
+    method: POST
+    body_format: json
+    body: "{{ status_payload }}"
+    status_code: [200, 201, 202, 204]
+    timeout: 10
+  vars:
+    status_payload:
+      store_id: "{{ store_id }}"
+      image: "{{ queue_effective_image }}"
+      channel: "{{ queue_store_channel }}"
+      host: "{{ ansible_hostname }}"
+      generated_at: "{{ ansible_date_time.iso8601 }}"
+  when: queue_status_webhook_url | length > 0

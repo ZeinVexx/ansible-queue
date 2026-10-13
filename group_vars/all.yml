@@ -1,0 +1,22 @@
+---
+queue_status_webhook_url: ""
+
+# Demo setup: use a tiny public image so it is easy to run on multiple VMs
+queue_container_name: demo-web
+queue_container_ports:
+  - "8080:80"
+queue_container_volumes:
+  - "/etc/queue-handler/site/index.html:/usr/share/nginx/html/index.html:ro"
+queue_log_tail_lines: 200
+
+queue_container_env:
+  TZ: UTC
+  SERVER_NAME: "{{ store_id }}"
+
+queue_registry_auth:
+  enabled: false
+  registry_url: ghcr.io
+  secret_fetch_command: ""
+  login_reauthorize: true
+
+store_id: "{{ lookup('env', 'STORE_ID') | default(ansible_hostname, true) }}"

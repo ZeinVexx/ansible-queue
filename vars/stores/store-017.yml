@@ -1,0 +1,10 @@
+---
+store_extra_env:
+  QUEUE_PRINTER_NAME: PRINTER_B2
+  QUEUE_TIMEZONE: Asia/Riyadh
+
+store_category_rules:
+  - id: normal
+    label: Standard
+  - id: fastlane
+    label: Fast Lane

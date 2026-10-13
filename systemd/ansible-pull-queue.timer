@@ -1,0 +1,11 @@
+[Unit]
+Description=Run ansible-pull every 2 minutes for queue platform
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+RandomizedDelaySec=20
+Unit=ansible-pull-queue.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Run ansible-pull for queue platform
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/ansible-pull-queue
+WorkingDirectory=/opt/ansible-pull/queue
+ExecStart=/usr/bin/ansible-pull \
+  -U ${REPO_URL} \
+  -C ${REPO_BRANCH} \
+  -d /opt/ansible-pull/queue \
+  --clean \
+  -i inventory/localhost.yml \
+  playbooks/site.yml \
+  -e store_id=${STORE_ID}

@@ -1,0 +1,12 @@
+---
+store_extra_env:
+  QUEUE_PRINTER_NAME: PRINTER_A1
+  QUEUE_TIMEZONE: Asia/Riyadh
+
+store_category_rules:
+  - id: normal
+    label: Regular
+  - id: women
+    label: Women
+  - id: elderly
+    label: Elderly

@@ -1,0 +1,37 @@
+---
+- name: Queue platform pull run
+  hosts: localhost
+  gather_facts: true
+  become: true
+
+  pre_tasks:
+    - name: Load rollout targets
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../rollout/targets.yml"
+
+    - name: Resolve store-specific vars file path
+      ansible.builtin.set_fact:
+        store_vars_file: "{{ lookup('first_found', lookup_params) }}"
+      vars:
+        lookup_params:
+          files:
+            - "{{ store_id }}.yml"
+            - default.yml
+          paths:
+            - "{{ playbook_dir }}/../vars/stores"
+
+    - name: Load store vars
+      ansible.builtin.include_vars:
+        file: "{{ store_vars_file }}"
+
+    - name: Resolve rollout channel for this store
+      ansible.builtin.set_fact:
+        queue_store_channel: "{{ queue_rollout.store_channels[store_id] | default(queue_rollout.default_channel) }}"
+
+    - name: Resolve final image for this store
+      ansible.builtin.set_fact:
+        queue_effective_image: "{{ queue_rollout.store_pins[store_id] | default(queue_rollout.channels[queue_store_channel]) }}"
+
+  roles:
+    - role: queue_container
+    - role: store_ops

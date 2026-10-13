@@ -1,0 +1,69 @@
+---
+- name: Check operation marker file
+  ansible.builtin.stat:
+    path: "/var/lib/queue-agent/ops-history/{{ item.id }}.json"
+  register: op_marker
+
+- name: Evaluate operation targeting
+  ansible.builtin.set_fact:
+    command_is_targeted: >-
+      {{
+        (item.enabled | default(true) | bool)
+        and (
+          ('all' in (item.target_stores | default([])))
+          or (store_id in (item.target_stores | default([])))
+        )
+      }}
+
+- name: Execute host-side operation
+  ansible.builtin.shell: "{{ item.command }}"
+  args:
+    chdir: "{{ item.chdir | default(omit) }}"
+  become: "{{ item.become | default(false) | bool }}"
+  become_user: "{{ item.become_user | default('root') }}"
+  register: op_result
+  changed_when: true
+  failed_when: >-
+    (not (item.ignore_errors | default(false) | bool)) and (op_result.rc != 0)
+  when:
+    - command_is_targeted
+    - (item.runner | default('container')) == 'host'
+    - (not (item.once | default(true) | bool)) or (not op_marker.stat.exists)
+
+- name: Execute container-side operation
+  ansible.builtin.shell: >-
+    docker exec{% if item.chdir is defined %} -w {{ item.chdir }}{% endif %}
+    {{ item.container | default(queue_container_name) }}
+    sh -lc {{ item.command | quote }}
+  register: op_result
+  changed_when: true
+  failed_when: >-
+    (not (item.ignore_errors | default(false) | bool)) and (op_result.rc != 0)
+  when:
+    - command_is_targeted
+    - (item.runner | default('container')) != 'host'
+    - (not (item.once | default(true) | bool)) or (not op_marker.stat.exists)
+
+- name: Persist operation result
+  ansible.builtin.copy:
+    dest: "/var/lib/queue-agent/ops-history/{{ item.id }}.json"
+    owner: root
+    group: root
+    mode: "0644"
+    content: "{{ command_result_payload | to_nice_json }}"
+  vars:
+    command_result_payload:
+      id: "{{ item.id }}"
+      store_id: "{{ store_id }}"
+      runner: "{{ item.runner | default('container') }}"
+      container: "{{ item.container | default(queue_container_name) }}"
+      chdir: "{{ item.chdir | default('') }}"
+      become: "{{ item.become | default(false) | bool }}"
+      command: "{{ item.command }}"
+      rc: "{{ op_result.rc | default(-1) }}"
+      stdout: "{{ op_result.stdout | default('') }}"
+      stderr: "{{ op_result.stderr | default('') }}"
+      executed_at: "{{ ansible_date_time.iso8601 }}"
+  when:
+    - command_is_targeted
+    - op_result is defined

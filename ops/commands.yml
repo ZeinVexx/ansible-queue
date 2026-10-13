@@ -1,0 +1,29 @@
+---
+store_commands:
+  - id: restart-queue-2026-10-12
+    enabled: false
+    target_stores: ["store-001"]
+    runner: host
+    container: queue-handler
+    become: true
+    command: "systemctl restart queue-handler"
+    once: true
+    ignore_errors: false
+
+  - id: print-health-2026-10-12
+    enabled: false
+    target_stores: ["all"]
+    container: queue-handler
+    command: "curl -sS http://127.0.0.1:8080/health"
+    once: true
+    ignore_errors: true
+
+  - id: check-disk-2026-10-12
+    enabled: false
+    target_stores: ["store-017"]
+    runner: host
+    become: true
+    chdir: /var/lib/queue-handler
+    command: "df -h . && du -sh ."
+    once: true
+    ignore_errors: false

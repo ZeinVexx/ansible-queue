@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Queue Demo</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 3rem auto;
+        max-width: 720px;
+        padding: 2rem;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      }
+      code {
+        background: #eef2ff;
+        padding: 0.15rem 0.4rem;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Store Demo Site</h1>
+      <p><strong>Store ID:</strong> <code>{{ store_id }}</code></p>
+      <p><strong>Channel:</strong> <code>{{ queue_store_channel }}</code></p>
+      <p><strong>Image:</strong> <code>{{ queue_effective_image }}</code></p>
+      <p><strong>Host:</strong> <code>{{ ansible_hostname }}</code></p>
+      <p>This page is served by a lightweight nginx container for multi-VM testing.</p>
+    </div>
+  </body>
+</html>

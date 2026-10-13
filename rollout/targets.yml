@@ -1,0 +1,16 @@
+---
+queue_rollout:
+  default_channel: stable
+
+  channels:
+    stable: nginx:1.27.5-alpine
+    canary: nginx:1.28.0-alpine
+
+  # Example: canary only selected stores; others remain on stable.
+  store_channels:
+    store-001: canary
+    store-017: stable
+
+  # Hard pin for exceptional stores.
+  store_pins:
+    store-099: nginx:1.26.3-alpine

@@ -1,0 +1,83 @@
+---
+- name: Ensure working directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /etc/queue-handler
+    - /etc/queue-handler/site
+    - /var/lib/queue-handler/data
+    - /var/log/queue-handler
+    - /var/lib/queue-agent
+
+- name: Render demo landing page
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: /etc/queue-handler/site/index.html
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Render queue environment file
+  ansible.builtin.template:
+    src: queue.env.j2
+    dest: /etc/queue-handler/queue.env
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Validate registry auth settings when enabled
+  ansible.builtin.assert:
+    that:
+      - queue_registry_auth.secret_fetch_command | default('') | length > 0
+      - queue_registry_auth.registry_url | default('') | length > 0
+    fail_msg: >-
+      queue_registry_auth.enabled is true but secret_fetch_command or registry_url
+      is missing.
+  when: queue_registry_auth.enabled | default(false) | bool
+
+- name: Fetch private registry credentials from local secret manager
+  ansible.builtin.command: "{{ queue_registry_auth.secret_fetch_command }}"
+  register: queue_registry_secret
+  changed_when: false
+  no_log: true
+  when: queue_registry_auth.enabled | default(false) | bool
+
+- name: Parse private registry credentials
+  ansible.builtin.set_fact:
+    queue_registry_creds: "{{ queue_registry_secret.stdout | from_json }}"
+  no_log: true
+  when: queue_registry_auth.enabled | default(false) | bool
+
+- name: Login to private Docker registry
+  community.docker.docker_login:
+    registry_url: "{{ queue_registry_auth.registry_url }}"
+    username: "{{ queue_registry_creds.username }}"
+    password: "{{ queue_registry_creds.password }}"
+    reauthorize: "{{ queue_registry_auth.login_reauthorize | default(true) | bool }}"
+  no_log: true
+  when: queue_registry_auth.enabled | default(false) | bool
+
+- name: Pull selected queue image
+  community.docker.docker_image:
+    name: "{{ queue_effective_image }}"
+    source: pull
+
+- name: Run queue container
+  community.docker.docker_container:
+    name: "{{ queue_container_name }}"
+    image: "{{ queue_effective_image }}"
+    pull: never
+    state: started
+    restart_policy: unless-stopped
+    recreate: true
+    env_file: /etc/queue-handler/queue.env
+    published_ports: "{{ queue_container_ports }}"
+    volumes: "{{ queue_container_volumes }}"
+    log_driver: json-file
+    log_options:
+      max-size: "20m"
+      max-file: "5"

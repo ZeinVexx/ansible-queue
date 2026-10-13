@@ -1,0 +1,8 @@
+---
+store_category_rules:
+  - id: normal
+    label: Normal Queue
+  - id: priority
+    label: Priority Queue
+
+store_extra_env: {}
