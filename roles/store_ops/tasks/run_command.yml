@@ -16,9 +16,8 @@
       }}
 
 - name: Execute host-side operation
-  ansible.builtin.shell: "{{ item.command }}"
-  args:
-    chdir: "{{ item.chdir | default(omit) }}"
+  ansible.builtin.shell: >-
+    cd "{{ item.chdir | default('/')}}" && {{ item.command }}
   become: "{{ item.become | default(false) | bool }}"
   become_user: "{{ item.become_user | default('root') }}"
   register: op_result
@@ -57,12 +56,12 @@
       store_id: "{{ store_id }}"
       runner: "{{ item.runner | default('container') }}"
       container: "{{ item.container | default(queue_container_name) }}"
-      chdir: "{{ item.chdir | default('') }}"
+      chdir: "{{ item.chdir | default('/') }}"
       become: "{{ item.become | default(false) | bool }}"
       command: "{{ item.command }}"
       rc: "{{ op_result.rc | default(-1) }}"
-      stdout: "{{ op_result.stdout | default('') }}"
-      stderr: "{{ op_result.stderr | default('') }}"
+      stdout: "{{ op_result.stdout | default('') | regex_replace('\\n$', '') }}"
+      stderr: "{{ op_result.stderr | default('') | regex_replace('\\n$', '') }}"
       executed_at: "{{ ansible_date_time.iso8601 }}"
   when:
     - command_is_targeted
